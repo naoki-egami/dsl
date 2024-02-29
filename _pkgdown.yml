@@ -1,0 +1,45 @@
+url: http://naokiegami.com/dsl/
+template:
+  bootstrap: 5
+
+
+navbar:
+  structure:
+    left:  [start, model, faq, tutorial, reference]
+  components:
+   start:
+    text: Get Started
+    href: articles/intro.html
+   model:
+    text: Models available in DSL
+    href: articles/model.html
+   faq:
+    text: Frequently Asked Questions
+    href: articles/faq.html
+   tutorial:
+    text: Tutorials
+    menu:
+    - text: Units of Analysis and Labeling Differ
+      href: articles/aggregate.html
+
+reference:
+- title: DSL functions
+  contents:
+  - dsl
+  - summary.dsl
+  - power_dsl
+  - summary.power_dsl
+  - plot.power_dsl
+  - available_method
+
+- title: Data for illustrating DSL
+  contents:
+  - PanChen
+  - data_lm
+  - data_logit
+  - data_felm
+  - data_unequal
+  - data_post
+  - data_cand
+  - data_time
+  - data_sl

@@ -6,3 +6,6 @@ index.Rmd
 index.md
 ^vignettes$
 ^docs$
+^_pkgdown\.yml$
+^pkgdown$
+^\.github$
