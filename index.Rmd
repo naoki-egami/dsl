@@ -38,7 +38,7 @@ install_github("naoki-egami/dsl", dependencies = TRUE)
 
 - [Musashi Hinck](https://muhark.github.io/about)
 
-- [Brandon M. Stewart](https://muhark.github.io/about)
+- [Brandon M. Stewart](https://bstewart.scholar.princeton.edu/)
 
 - [Hanying Wei](https://polisci.columbia.edu/content/hanying-wei)
 
