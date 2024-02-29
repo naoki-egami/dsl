@@ -1,0 +1,101 @@
+---
+title: "Get Started with dsl"
+output: 
+  md_document:
+    variant: markdown_github
+---
+
+<br>
+
+<p class = "h5">**On this page, we provide the introduction to `dsl` package.**</p> 
+
+<br>
+<div class="card bg-light mb-3">
+<div class="card-header">**Table of Contents**</div>
+<div class="card-body">
+
+- [**Overview**](#over) <br> 
+We provide the overview of `dsl` package.
+
+
+- [**`dsl`: DSL Estimator**](#dsl) <br>
+We explain how to use function `dsl()` to use predicted variables in statistical analyses.
+
+</div>
+</div>
+
+<br>
+
+DSL is a general estimation framework for using predicted variables in statistical analyses. The package is especially useful for researchers trying to use large language models (LLMs) to annotate a large number of documents they analyze subsequently. DSL allows users to obtain statistically valid estimates and standard errors, even when LLM annotations contain arbitrary non-random prediction errors and biases.
+
+### **Overview**{#over}
+<p class="lh-lg">
+</p>
+
+In text-as-data applications, one of the most common tasks is text annotation (or text classification) to generate text-based variables for subsequent statistical analyses. For example, researchers might first annotate whether each online post contains hate speech such that they can later study who are more likely to post hate speech and what types of interventions can reduce hate speech. Over the last decade, scholars used a variety of supervised machine learning (ML) methods to automate this text annotation step by training machines to mimic expert-coding. More recently, a growing number of papers propose using large language models (LLMs), such as ChatGPT, to automate text annotations by predicting expert annotations. Given that researchers can adapt LLMs to perform a wide range of text annotation tasks by simply changing prompts, automated LLM annotations present exciting opportunities for the social sciences. 
+
+While text annotation is essential, it is only the first step. Social scientists are often primarily interested in using text labels predicted by automated methods as key variables in subsequent statistical analyses. In the vast majority of current applications, researchers treat predicted text-based variables as if they were observed without any error: they ignore **prediction errors** in the first step of automated text annotation. However, ignoring such prediction errors in the first step of text annotation, even if errors are small, leads to substantial bias, invalid confidence intervals, and wrong p-values in downstream statistical analyses of text-based variables. Biases from prediction errors exist even when the prediction accuracy in the text classification step is extremely high, e.g., above 90\% or even at 95\%. This is because prediction errors are not random---prediction errors are correlated with observed and unobserved variables we include in downstream analyses. In practice, this means that substantive and statistical conclusions can easily flip if researchers ignore prediction errors in automated text annotation methods. 
+
+**Design-based supervised learning (DSL)** is a general framework for using predicted variables in downstream statistical analyses without suffering from bias due to prediction errors. Unlike the existing approaches, DSL allows researchers to obtain statistically valid estimates and standard errors, even when automated text annotation methods have arbitrary non-random prediction errors. To do so, DSL combines large-scale (potentially biased) automated annotations and a smaller number of high-quality expensive expert annotations using a doubly robust bias-correction step. Please read [Egami, Hinck, Stewart, and Wei (2023)](https://naokiegami.com/paper/dsl.pdf) for the methodological details.
+
+<br>
+
+### **`dsl`: DSL Estimator**{#dsl} 
+<p class="lh-lg">
+</p>
+As an example, we use Pan and Chen (2018), which studies whether online complaints accusing of corruption by local officials are reported to upper-level governments in China. In this example, variable `countyWrong` (whether a post accuses of corruption by county-level politicians) requires text annotation. We randomly sampled a subset of the data (500 documents) to provide expert annotations for this variable.  
+
+```{r eval = TRUE, echo = TRUE, tidy=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+library(dsl)
+data("PanChen")
+head(PanChen)
+```
+
+Variable `countyWrong` represents expert labels, and it takes `NA` if a given observation is not labeled by experts. 
+
+Variable `pred_countyWrong` represents text labels predicted by a user-specified automated text annotation method, e.g., annotations given by a user-specified LLM. In this example, variable `pred_countyWrong` represent annotations given by GPT-4. Unlike variable ``countyWrong``, variable `pred_countyWrong` is available for the entire data.
+
+The remaining six columns represent other key variables included in the main statistical analyses. 
+
+If users include `pred_countyWrong` instead of `countyWrong` in the downstream analyses, they will suffer from biases due to prediction errors. If users worry about prediction errors and only use a subset of the data that have expert-coded `countyWrong`, they have to miss a large number of observations. 
+
+Researchers can use `dsl` to perform their main statistical analyses by analyzing all the data while taking into account prediction errors. In this example, we are interested in running a logistic regression model regressing binary outcome `SendOrNot` on a set of independent variables, including `countyWrong`. 
+
+```{r eval = TRUE, echo = TRUE, tidy=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+out <- dsl(model = "logit", 
+           formula = SendOrNot ~ countyWrong + prefecWrong + 
+             connect2b + prevalence + regionj + groupIssue,
+           predicted_var = "countyWrong",
+           prediction = "pred_countyWrong",
+           data = PanChen)
+```
+
+| Argument | Description              |
+|:-------- | :------------------------|
+|`model` | A regression model. `dsl` currently supports `lm` (linear regression), `logit` (logistic regression), and `felm` (fixed-effects regression).|
+|`formula` | A formula used in the specified regression model.|
+|`predicted_var` | A vector of column names in the data that correspond to variables that need to be predicted.|
+|`prediction` | A vector of column names in the data that correspond to predictions of `predicted_var`. |
+| `data`    | A data frame. The class should be `data.frame`.|
+
+Researchers can obtain the summary of output using function `summary()`. 
+
+```{r eval = TRUE, echo = TRUE, tidy=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+summary(out)
+```
+
+It first outputs the specification of the DSL estimation, including the number of labeled observations and the sampling process for expert annotations. When users do not specify explicitly, function `dsl()` assumes random sampling with equal probabilities. If users deployed a sampling strategy other than random sampling with equal probabilities, they have to explicitly specify it using argument `sample_prob` when fitting `dsl` (please see [this page](http://naokiegami.com/dsl/articles/faq.html)).
+
+As for coefficients, researchers can interpret estimates and standard errors as in the usual regression analyses. The package implements the hetroskedasticity-robust standard errors by default. When users want to compute cluster-robust standard errors, they can use argument `cluster`, which we explain more [here](http://naokiegami.com/dsl/articles/faq.html). 
+
+The package supports different types of regression models: linear regression (`lm`), logistic regression (`logit`), and linear fixed-effects regression (`felm`). To learn more about each model, please visit **[Models Available in DSL](http://naokiegami.com/dsl/articles/model.html)**.
+
+To help users apply DSL in various practical settings, we answer frequently asked questions at **[Frequently Asked Questions](http://naokiegami.com/dsl/articles/faq.html)**, including how to determine the required number of expert annotations, how to incorporate more complex sampling strategies for expert annotations, and how to handle cluster standard errors. 
+
+
+**References:** 
+
+- [Egami, Hinck, Stewart, and Wei. (2023)](https://naokiegami.com/paper/dsl.pdf). Using Imperfect Surrogates for Downstream Inference:
+Design-based Supervised Learning for Social Science Applications of Large Language Models, Advances in Neural Information Processing Systems (NeurIPS).
+
+- Pan and Chen. (2018). Concealing Corruption: How Chinese Officials Distort Upward Reporting of Online Grievances. American Political Science Review 112, 3, 602–620. 

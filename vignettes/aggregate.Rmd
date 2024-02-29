@@ -1,0 +1,121 @@
+---
+title: "What if the Unit of Analysis is not the same as the Unit of Labeling?"
+output: 
+  md_document:
+    variant: markdown_github
+---
+<br>
+
+**On this page, we explain how to setup data for `dsl` when the unit of analysis is not the same as the unit of labeling.**
+
+
+### **Overview**{#over}
+<p class="lh-lg">
+</p>
+
+In some applications, the unit of analysis is not the same as the unit of labeling. Researchers often annotate each document, but the unit of analysis might be some aggregates of documents. For example, users might code whether each online post by political candidates mentions an economic policy: the unit of labeling is at the online post level. But researchers might be interested in how the proportion of posts mentioning an economic policy varies between different candidates: the unit of analysis is at the candidate level. Here, each candidate has multiple posts, and the main text-based variable is defined as the proportion of online posts mentioning an economic policy for each candidate. 
+
+In such applications, how can users apply DSL? In general, DSL should be applied at the unit of analysis (i.e., the candidate-level data). Then, how can we prepare the candidate-level data from the post-level data that are expert-coded? We need two simple steps: (1) aggregating expert-coding and (2) aggregating sampling probabilities
+
+<br>
+
+#### **1. Aggregating Expert-Coding** 
+<p class="lh-lg">
+</p>
+
+First, we discuss how to aggregate expert coding at the post-level data up to the candidate-level data. 
+
+We start with the post level data. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+library(dsl)
+data("data_post") # example data 
+head(data_post, n = 7)
+```
+
+In this data, variable `economy` represents expert-coded labels about whether a given post mentions an economic policy. The first candidate has two posts that are all labeled, and for this candidate, we can compute the proportion of online posts mentioning an economic policy to be `0`. For the second candidates, none of the posts are labeled, so this second candidate is not labeled. For the third candidate, two of the posts are labeled. As long as posts are randomly selected for expert annotations, researchers can use the mean of labeled posts to estimate the proportion of online posts mentioning an economic policy to be `0.5` for this particular candidate. 
+
+Variable `pred_economy` represents text labels predicted by a user-specified automated text annotation method. Variable `post_sample_prob` is the post-level sampling probability for labeling. In this example, all the posts have the equal probability of being sampled with 30\%.  
+
+In general, when posts are randomly selected for expert annotations, users can compute the expert-coded `mean_economy` variable at the candidate-level by ignoring `NAs` and computing the proportion of online posts mentioning an economic policy just focusing on labeled documents. For candidates that do not have any labeled posts, those candidates will be recorded as non-labeled in the candidate-level data. For variable `pred_economy`, users can directly compute the mean within each candidate. 
+
+Users can implement this step by simply using `group_by()` and `summarize()` functions in `tidyverse` or using `tapply()`. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+library(tidyverse)
+economy_cand <- data_post %>% 
+  group_by(cand_id) %>%
+  summarize(mean_economy = mean(economy, na.rm = T),
+            mean_pred_economy = mean(pred_economy, na.rm = T))
+
+# Turn NaN to NA (get ready for `dsl`)
+economy_cand$mean_economy[is.nan(economy_cand$mean_economy)] <- NA 
+
+head(economy_cand)
+```
+
+At the candidate-level, variable `mean_economy` is the expert-coded proportion of posts mentioning an economic policy, and variable `mean_pred_economy` is the predicted proportion of posts mentioning an economic policy. 
+
+
+Here, we are using the mean to aggregate posts within each candidate, but users can use any function of their choice to define their text-based variable. In general, as long as posts are randomly selected for expert annotations, users simply need to apply their definition of text-based variables for labeled documents (ignoring non-labeled documents) and treat candidates that have no labeled posts as non-labeled. 
+
+<br>
+
+#### **2. Aggregating Sampling Probabilities** 
+<p class="lh-lg">
+</p>
+
+Users also need to translate the sampling probability from the post-level to the candidate-level. 
+
+In particular, the sampling probability of having expert-coding for each candidate is the probability of having expert-coding on at least one document within each candidate. When users randomly sample documents, they need to take into account different numbers of posts within each candidate. This is because if a given candidate has more posts, she is more likely to have at least one expert-coded document. 
+
+To compute this properly, users can rely on the following simple function. Mathematically this computes the probability of having at least one expert annotation for each candidate. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+cand_sample_prob <- data_post %>% 
+  group_by(cand_id) %>%
+  summarize(cand_sample_prob = 1 - prod(1 - post_sample_prob))
+
+head(cand_sample_prob)
+```
+
+If users already know that their main statistical analyses are at the candidate level, they can consider two-stage sampling, i.e., randomly sample candidates first and then randomly sample posts within each candidate. Using this two-stage sampling will make the calculation of the sampling probabilities at the candidate level even simpler. They have to just use the first stage (the probability of sampling each candidate for expert annotations). 
+
+<br>
+
+#### **3. Merging Other Candidate-level data**
+<p class="lh-lg">
+</p>
+
+To prepare the final candidate-level data, we can combine two data sets above as well as other candidate-level data.
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+# First we merge (mean_economy, mean_pred_economy) and cand_sample_prob
+cand_main <- merge(economy_cand, cand_sample_prob, by = "cand_id")
+```
+
+Then, users might merge some candidate-level data. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+data("data_cand") # example candidate-level data 
+data_cand_merged <- merge(cand_main, data_cand, by = "cand_id")
+head(data_cand_merged)
+```
+
+<br>
+
+#### **4. Fitting DSL with the Candidate-level Data** 
+<p class="lh-lg">
+</p>
+
+Finally, run `dsl` on the candidate-level data by specifying the sampling probability. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+out_agg <- dsl(model = "lm", 
+               formula = mean_economy ~ gender + edu + ideology,
+               predicted_var =  "mean_economy",
+               prediction = "mean_pred_economy",
+               sample_prob = "cand_sample_prob",
+               data = data_cand_merged)
+summary(out_agg)
+```

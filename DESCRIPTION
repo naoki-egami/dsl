@@ -1,0 +1,26 @@
+Package: dsl
+Type: Package
+Title: Design-based Supervised Learning 
+Version: 0.1.0
+Authors@R: c(
+    person("Naoki", "Egami", email = "naoki.egami5@gmail.com", role = c("cre", "aut")),
+    person("Musashi", "Hinck", email = "mjacobsharukawa@princeton.edu", role = "aut"),
+    person("Brandon", "M. Stewart", email = "bms4@princeton.edu", role = "aut"),
+    person("Hanying", "Wei", email = "hw2893@columbia.edu", role = "aut"))
+Maintainer: Naoki Egami <naoki.egami5@gmail.com>
+Description: R package dsl implements design-based supervised learning (DSL) proposed in Egami, Hinck, Stewart, and Wei (2023). DSL is a general estimation framework for using predicted variables in statistical analyses. The package is especially useful for researchers trying to use large language models (LLMs) to annotate a large number of documents they analyze subsequently. dsl allows users to obtain statistically valid estimates and standard errors, even when LLM annotations contain arbitrary non-random prediction errors and biases.
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+Imports:
+    grf,
+    estimatr,
+    SuperLearner,
+    arm,
+    Matrix,
+    matrixcalc,
+    tidyverse
+RoxygenNote: 7.3.1
+Depends:
+    R (>= 3.5.0)
+URL: http://naokiegami.com/dsl/

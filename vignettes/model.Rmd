@@ -1,0 +1,142 @@
+---
+title: "Models Available in DSL"
+output: 
+  md_document:
+    variant: markdown_github
+---
+
+<div class="card bg-light mb-3">
+<div class="card-header">**Table of Contents**</div>
+<div class="card-body">
+
+- [**`lm`: Linear Regression**](#lm) <br>
+
+- [**`logit`: Logisitc Regression**](#logit) <br>
+
+- [**`felm`: Fixed Effects Linear Regression**](#felm) <br>
+
+
+</div>
+</div>
+
+Note: We currently cover three models (`lm`, `logit`, `felm`). In the next update, we are planning to add more models, including multinomial-logit regression, poisson regression, and two-stage least squares for the instrumental variable method. 
+
+<br>
+
+### **`lm`: Linear Regression**{#lm} 
+<p class="lh-lg">
+</p>
+
+Researchers can implement DSL linear regression by specifying `model = "lm"`. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+library(dsl)
+data("data_lm") # example data 
+head(data_lm)
+```
+
+In this example, variable `Y` requires text annotation (they take `NA` if a given observation is not labeled by experts). Variable `pred_Y` represents predictions for `Y`.
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+out_lm <- dsl(model = "lm", 
+              formula = Y ~ X1 + X2 + X3 + X4 + X5,
+              predicted_var = "Y",
+              prediction = "pred_Y",
+              data = data_lm)
+```
+
+| Argument | Description              |
+|:-------- | :------------------------|
+|`model` | A regression model. `dsl` currently supports `lm` (linear regression), `logit` (logistic regression), and `felm` (fixed-effects regression).|
+|`formula` | A formula used in the specified regression model.|
+|`predicted_var` | A vector of column names in the data that correspond to variables that need to be predicted.|
+|`prediction` | A vector of column names in the data that correspond to predictions of `predicted_var`. |
+| `data`    | A data frame. The class should be `data.frame`.|
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+summary(out_lm)
+```
+
+<br>
+
+### **`logit`: Logistic Regression**{#logit} 
+<p class="lh-lg">
+</p>
+
+Researchers can implement DSL logistic regression by specifying `model = "logit"`. It requires the same arguments as `model = "lm"`. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+data("data_logit") # example data 
+head(data_logit)
+```
+
+In this example, variables `Y` and `X1` require text annotation (they take `NA` if a given observation is not labeled by experts). Variables `pred_Y` and `pred_X1` represent predictions for `Y` and `X1`. As in this example, `dsl` can handle cases when multiple variables require text annotations.
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+out_logit <- dsl(model = "logit", 
+                 formula = Y ~ X1 + X2 + X4,
+                 predicted_var = c("Y", "X1"),
+                 prediction = c("pred_Y", "pred_X1"),
+                 data = data_logit)
+summary(out_logit)
+```
+
+<br>
+
+### **`felm`: Fixed Effects Linear Regression**{#felm} 
+<p class="lh-lg">
+</p>
+
+Researchers can implement DSL fixed effects linear regression by specifying `model = "felm"`. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+data("data_lm")  # example data 
+head(data_felm)
+```
+
+In this example, variable `log_gsp` requires text annotation (it takes `NA` if a given observation is not labeled by experts). Variable `pred_log_gsp` represents predictions for `log_gsp`. 
+
+
+#### One-way Fixed Effects
+
+To implement DSL one-way fixed effects regression, users can set `fixed_effect = "oneway"`. Use `index` to denote which column defines fixed effects. Users can also cluster standard errors by specifying a variable name in argument `cluster` (this `cluster` argument is also avaiable for other models). 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+out_felm_one <- dsl(model = "felm", 
+                    formula = log_pcap ~ log_gsp + log_pc + unemp,
+                    predicted_var =  "log_gsp",
+                    prediction = "pred_log_gsp",
+                    fixed_effect = "oneway", 
+                    index = c("state"), 
+                    cluster = "state",
+                    data = data_felm)
+```
+| Argument | Description              |
+|:-------- | :------------------------|
+|`fixed_effect` | A type of fixed effects regression you run. `oneway` (one-way fixed effects) or `twoways` (two-way fixed effects).|
+|`index` | A vector of column names specifying fixed effects. When `fixed_effect = oneway`, it has one element. When `fixed_effect = twoways`, it has two elements, e.g., `index = c("state", "year")`. |
+|`cluster` | A column name in the data that indicates the level at which cluster standard errors are calculated. Default is `NULL`.|
+
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+summary(out_felm_one)
+```
+
+#### Two-way Fixed Effects
+
+To implement DSL two-way fixed effects regression, users can set `fixed_effect = "twoways"`. Use `index` (a vector of length 2) to denote which columns define fixed effects. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+out_felm_two <- dsl(model = "felm", 
+                    formula = log_pcap ~ log_gsp + log_pc + unemp,
+                    predicted_var =  "log_gsp",
+                    prediction = "pred_log_gsp",
+                    fixed_effect = "twoways", 
+                    index = c("state", "year"), 
+                    cluster = "state",
+                    data = data_felm)
+```
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+summary(out_felm_two)
+```

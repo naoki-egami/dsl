@@ -1,0 +1,275 @@
+---
+title: "Frequently Asked Questions"
+output: 
+  md_document:
+    variant: markdown_github
+---
+<br>
+
+<p class = "h5">**On this page, we answer frequently asked questions.**</p> 
+
+<br>
+<div class="card bg-light mb-3">
+<div class="card-header">**Table of Contents**</div>
+<div class="card-body">
+
+* [How Many Documents Should Experts Annotate?](#power) <br> 
+
+* [What Types of Predicted Variables Can DSL Handle?](#variable) <br> 
+
+* [(More Complex) Sampling Strategies?](#sample) <br>
+
+* [How Can We Implement Cluster Standard Errors in DSL?](#cluster) <br>
+
+* [What if the Unit of Analysis is not the same as the Unit of Labeling?](#unit) <br>
+
+* [How to use DSL for Estimating the Category Proportions over Time or across Groups?](#category) <br>
+
+* [How Can We Internally Implement Supervised Machine Learning for Predictions?](#sl) <br>
+</div>
+</div>
+
+<br>
+
+#### **How Many Documents Should Experts Annotate?**{#power}
+<p class="lh-lg">
+</p>
+
+In practice, researchers might wonder how many documents they have to expert annotate. To help researchers in such common scenarios, we develop a data-driven power analysis: after annotating a small number of documents, we can predict how many more documents researchers need to annotate in order to achieve a user-specified size of standard error. 
+
+As an example, we use the data we introduced in the Get Started page. 
+
+```{r eval = TRUE, echo = TRUE, tidy=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+library(dsl)
+data("PanChen")
+head(PanChen)
+```
+
+In particular, users can apply function `power_dsl()` to predict standard errors with different size of expert-coded data. Researchers can use the same arguments from `dsl` and add one argument `labeled_size`, which represents the number of expert-coded documents for which we predict standard errors. Recall that the current number of expert-coded documents is 500.
+
+```{r eval = TRUE, echo = TRUE, tidy=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+power_out <- power_dsl(labeled_size = c(600, 700, 800, 900, 1000),
+                       model = "logit", 
+                       formula = SendOrNot ~ countyWrong + prefecWrong + 
+                         connect2b + prevalence + regionj + groupIssue,
+                       predicted_var = "countyWrong",
+                       prediction = "pred_countyWrong",
+                       data = PanChen)
+summary(power_out)
+```
+
+The first row shows the current standard errors for coefficients. The remaining rows show predicted standard errors. 
+
+Importantly, as we increase the number of expert annotations for `countyWrong`, standard errors for `countyWrong` are predicted to decrease sharply. For the other variables, we do not see similarly sharp reduction because the other variables are already observed for the entire data. Small reduction in their standard errors come from correlations with `countyWrong`.
+
+Researchers can use function `plot` to visualize the power analysis.
+
+```{r eval = TRUE, echo = TRUE, tidy=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+plot(power_out, coef_name = "countyWrong")
+```
+
+
+Finally, researchers can also apply `power_dsl()` directly to the output from function `dsl()`. 
+
+```{r eval = TRUE, echo = TRUE, tidy=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+out <- dsl(model = "logit", 
+           formula = SendOrNot ~ countyWrong + prefecWrong + 
+             connect2b + prevalence + regionj + groupIssue,
+           predicted_var = "countyWrong",
+           prediction = "pred_countyWrong",
+           data = PanChen)
+```
+
+
+```{r eval = TRUE, echo = TRUE, tidy=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+power_out2 <- power_dsl(dsl_out = out, 
+                        labeled_size = c(600, 700, 800, 900, 1000))
+summary(power_out2)
+```
+
+We can see that `power_out2` is identical to `power_out`.
+
+<br>
+
+#### **What Types of Predicted Variables Can DSL Handle?**{#variable} 
+<p class="lh-lg">
+</p>
+
+As we have shown in various examples in **[Get Started Page](http://naokiegami.com/dsl/articles/intro.html)** and **[Models Available in DSL](http://naokiegami.com/dsl/articles/model.html)**, users can incorporate predicted variables (i.e., text-based variables) as the outcome and/or independent variables. 
+
+For example, when users have text-based variables as both the outcome and independent variables, they can specify them as a vector in `predicted_var`. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+data("data_logit") # example data 
+
+head(data_logit)
+
+out_logit <- dsl(model = "logit", 
+                 formula = Y ~ X1 + X2 + X4,
+                 predicted_var = c("Y", "X1"),
+                 prediction = c("pred_Y", "pred_X1"),
+                 data = data_logit)
+```
+
+When there are more than one variable in `predicted_var`, rows that observe all the variables in `predicted_var` are counted as labeled, and rows that have at least one `NA` in variables in `predicted_var` are counted as non-labeled. 
+
+<br>
+
+#### **(More Complex) Sampling Strategies?**{#sample}
+<p class="lh-lg">
+</p>
+
+Researchers might consider sampling strategies for expert annotations other than random sampling with equal probabilities. As long as the sampling probability for each document is decided by the researchers and is greater than zero, DSL is applicable. For example, DSL allows stratified or block sampling schemes (i.e., change the sampling probability of documents based on document-level observed covariates) and can cover any case where the sampling probability depends on the LLM annotation, document-level covariates, independent variables, or the outcome variable. This generality is important because researchers might want to over-sample documents that are difficult to annotate. 
+
+In function `dsl()`, when using these more complex sampling strategies, users should specify the sampling probability of each document. For example, in the following data set, we set the sampling probability for expert annotation to be 30\% for documents with `X1 = 1` and set it to be 10\% for documents with `X1 = 0`. As you see below, variable `sample_prob` is `0.3` when `X1 = 1` and `0.1` when `X1 = 0`. Thus, this is random sampling with unequal probabilities. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+data("data_unequal") # example data 
+head(data_unequal)
+```
+
+When running `dsl()`, users just need to specify this unequal sampling probability in argument `sample_prob`. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+out_unequal <- dsl(model = "logit", 
+                   formula = Y ~ X1 + X2 + X3,
+                   predicted_var = c("Y"),
+                   prediction = c("pred_Y"),
+                   sample_prob = "sample_prob",
+                   data = data_unequal)
+summary(out_unequal)
+```
+
+When users rely on random sampling with unequal probabilities, `Random Sampling with Equal Probability` becomes `No`. 
+
+<br>
+
+#### **How Can We Implement Cluster Standard Errors in DSL?**{#cluster}
+<p class="lh-lg">
+</p>
+
+Users need to supply a variable name that defines clusters to argument `cluster` in function `dsl()`. This option is available for all model types (`lm`, `logit`, and `felm`). 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+data("data_felm") # example data 
+
+out_felm_one <- dsl(model = "felm", 
+                    formula = log_pcap ~ log_gsp + log_pc + unemp,
+                    predicted_var =  "log_gsp",
+                    prediction = "pred_log_gsp",
+                    fixed_effect = "oneway", 
+                    index = c("state"), 
+                    cluster = "state",
+                    data = data_felm)
+summary(out_felm_one)
+```
+
+When users applied cluster standard errors, the level of clustering is reported after the `Coefficients` table, e.g., as `Standard errors are clustered by state`.
+
+<br>
+
+#### **What if the Unit of Analysis is not the same as the Unit of Labeling?**{#unit}
+<p class="lh-lg">
+</p>
+
+In some applications, the unit of analysis is not the same as the unit of labeling. Researchers often annotate each document, but the unit of analysis might be some aggregates of documents. For example, users might code whether each online post by political candidates mentions an economic policy: the unit of labeling is at the online post level. But researchers might be interested in how the proportion of posts mentioning an economic policy varies between different candidates: the unit of analysis is at the candidate level. Here, each candidate has multiple posts, and the main text-based variable is defined as the proportion of online posts mentioning an economic policy for each candidate. 
+
+In such applications, how can users apply DSL? We provide step by step guide **[here](http://naokiegami.com/dsl/articles/aggregate.html).** 
+
+<br>
+
+#### **How to use DSL for Estimating the Category Proportions over Time or across Groups?**{#category}
+<p class="lh-lg">
+</p>
+
+Many scholars are interested in estimating the proportion of all documents in each user-specified category. For example, we might study how the proportion of censored documents changes over time, or how the proportion of social media posts containing hate speech differs across groups, such as Democrats and Republicans. These questions can be analyzed within the DSL framework, too. 
+
+We start with the basic data structure for `dsl`. In this data, `Y` denotes whether a document belongs to a category of interest, and `pred_Y` denotes the predicted value. We estimate the category proportions over time here as an example, but the same approach applies to estimating the category proportions across groups. 
+
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+data("data_time")
+head(data_time)
+```
+
+To estimate the category proportions over time, researchers can regress a text category on time using linear regression without an intercept. This is numerically equivalent to computing the DSL estimates within each year separately. To implement this, researchers can simply add `-1` to `formula` to remove an intercept. Note that this estimation approach uses the numerical equivalence between linear regression (`lm`) and subgroup means (as scholars use linear regression to compute difference-in-means in randomized experiments), and thus, researchers do not need to use logistic regression (`logit`).    
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+out_time <- dsl(model = "lm",
+                formula = Y ~ as.factor(year) - 1,
+                predicted_var = "Y",
+                prediction = "pred_Y",
+                data = data_time)
+summary(out_time)
+```
+Here, coefficients in front of each year are the estimated category proportions for each year. 
+
+
+<br>
+
+<!-- #### **Predictions are Multiple Steps** -->
+<!-- <p class="lh-lg"> -->
+<!-- </p> -->
+
+
+<!-- <br> -->
+
+<!-- #### **Only about Texts?** -->
+<!-- <p class="lh-lg"> -->
+<!-- </p> -->
+
+
+<!-- <br> -->
+
+#### **How Can We Internally Implement Supervised Machine Learning for Predictions?**{#sl}
+<p class="lh-lg">
+</p>
+
+One of the most common use cases of the package is when researchers have LLM annotations as `prediction` for some key text-based variables defined in `predicted_var`. 
+
+Alternatively, researchers can also internally implement the classical supervised machine learning methods to make predictions using the expert-coded data. 
+
+By building on `SuperLearner` package, we offer the following 41 supervised ML methods. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+available_method()
+```
+
+When researchers internally implement the classical supervised machine learning methods, the data structure looks like the data used in the classical supervised machine learning. In this example, `Y` requires text annotation and there are 10 variables available to predict `Y`. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+data("data_sl")  # example data 
+head(data_sl)
+```
+
+To internally implement supervised machine learning methods, users have to decide on a supervised machine learning model (specified in `sl_method`) and predictors (specified in `feature`). In `formula`, researchers can then specify the downstream statistical model they run after predicting `Y`. In this example, the main downstream analysis is linear regression where the outcome is `Y` and independent variables are `X1`,`X2`, and `X4`. 
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+out_lm_grf <- dsl(model = "lm", 
+                  formula = Y ~ X1 + X2 + X4,
+                  predicted_var = c("Y"),
+                  sl_method = "grf",
+                  feature =  c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10"),
+                  data = data_sl)
+```
+Here, we set `sl_method = "grf"` to use generalized random forest as the supervised machine learning model.
+
+
+```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+summary(out_lm_grf)
+```
+<!-- The theory of DSL implies that DSL estimates are consistent and have valid confidence intervals regardless of the choice of the underlying ML model. Researchers can check the stability of DSL estimates by changing the underlying ML model. Below, we set `method = "glmnet"` to use Lasso as the supervised machine learning model.  -->
+
+<!-- ```{r eval = TRUE, echo = TRUE, tidy = FALSE, warning = FALSE, error = FALSE, message = FALSE} -->
+<!-- library(glmnet) -->
+<!-- out_lm_lasso <- dsl(model = "lm",  -->
+<!--                     formula = Y ~ X1 + X2 + X4, -->
+<!--                     predicted_var = c("Y"), -->
+<!--                     method = "glmnet", -->
+<!--                     covariates =  c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10"), -->
+<!--                     data = data_sl) -->
+<!-- summary(out_lm_lasso) -->
+<!-- ``` -->
+<!-- Estimates based on random forest and Lasso are similar (within about 0.02 and smaller than standard errors) because DSL properly takes into account different prediction errors in each ML prediction.  -->
+
+Finally, for many existing methods that require stringent assumptions about prediction errors, they often have strict rules about whether variables used in the prediction stage can overlap with variables in the main analyses. Fortunately, in DSL, researchers do not need to worry about these issues because DSL does not require any assumption about prediction error. This is why researchers can include variables in the main statistical analyses (`X1`, `X2`, and `X4`) in the prediction step as well.  

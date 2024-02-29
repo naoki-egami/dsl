@@ -1,0 +1,10 @@
+---
+title: "dsl: Design-based Supervised Learning"
+output: 
+  md_document:
+    variant: markdown_github
+---
+
+# dsl: Design-based Supervised Learning
+
+We explain the details of the package on the package website (http://naokiegami.com/dslDev).
