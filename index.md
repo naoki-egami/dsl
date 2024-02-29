@@ -14,6 +14,7 @@ trying to use large language models (LLMs) to annotate a large number of
 documents they analyze subsequently. DSL allows users to obtain
 statistically valid estimates and standard errors, even when LLM
 annotations contain arbitrary non-random prediction errors and biases.
+
 Note: While [Egami, Hinck, Stewart, and Wei
 (2023)](https://naokiegami.com/paper/dsl.pdf) focused on settings where
 the outcome variable is text-based and requires prediction, this package
