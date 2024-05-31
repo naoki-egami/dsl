@@ -95,6 +95,8 @@ To help users apply DSL in various practical settings, we answer frequently aske
 
 **References:** 
 
+- [Egami, Hinck, Stewart, and Wei. (2024)](https://naokiegami.com/paper/dsl_ss.pdf). "Using Large Language Model Annotations for the Social Sciences: A General Framework of Using Predicted Variables in Downstream Analyses."
+
 - [Egami, Hinck, Stewart, and Wei. (2023)](https://naokiegami.com/paper/dsl.pdf). Using Imperfect Surrogates for Downstream Inference:
 Design-based Supervised Learning for Social Science Applications of Large Language Models, Advances in Neural Information Processing Systems (NeurIPS).
 

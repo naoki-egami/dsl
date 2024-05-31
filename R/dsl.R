@@ -190,7 +190,7 @@ dsl <- function(model = "lm",
 
   set.seed(seed)
 
-  cat("Sample Splitting: ")
+  cat("Cross-Fitting: ")
   for(ss_use in 1:sample_split){
     cat(paste0(ss_use,"/", sample_split, ".."))
 
