@@ -68,7 +68,7 @@ summary.dsl <- function(object, ci = 0.95, digits = 4, ...){
     cat(paste0("Prediction:  ", paste(c(object$internal$prediction), collapse = ", ")))
     cat("\n\n")
   }else{
-    cat(paste0("Prediction: ", object$internal$method, " with predictors specified in `covariates`"))
+    cat(paste0("Prediction: ", object$internal$method, " with predictors specified in `feature`"))
     cat("\n\n")
   }
 

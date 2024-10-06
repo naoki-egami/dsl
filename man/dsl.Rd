@@ -20,6 +20,8 @@ dsl(
   family = "gaussian",
   cross_fit = 5,
   sample_split = 10,
+  unc_label = FALSE,
+  unc_label_sim = 100,
   seed = 1234
 )
 }
@@ -28,7 +30,7 @@ dsl(
 
 \item{formula}{A formula used in the specified regression model.}
 
-\item{predicted_var}{A vector of column names in the data that correspond to variables that need to be predicted.}
+\item{predicted_var}{A vector of column names in the data that correspond to variables that need to be predicted. When \code{unc_label = TRUE}, this should be \code{list} where each element of the list contains variable names specifying labels from different coders.}
 
 \item{prediction}{A vector of column names in the data that correspond to predictions of \code{predicted_var}.}
 
@@ -53,6 +55,10 @@ dsl(
 \item{cross_fit}{The fold of cross-fitting. Default is \code{5}.}
 
 \item{sample_split}{The number of sampling-splitting. Default is \code{10}.}
+
+\item{unc_label}{A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the quasi-Bayesian approach to incorporate uncertainties in labels. Default is \code{FALSE}.}
+
+\item{unc_label_sim}{(Used when \code{unc_label = TRUE}) The number of re-sampling of labels within each observation. Default is \code{100}.}
 
 \item{seed}{Numeric \code{seed} used internally. Default is \code{1234}.}
 }

@@ -1,7 +1,7 @@
 Package: dsl
 Type: Package
 Title: Design-based Supervised Learning 
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: c(
     person("Naoki", "Egami", email = "naoki.egami5@gmail.com", role = c("cre", "aut")),
     person("Musashi", "Hinck", email = "mjacobsharukawa@princeton.edu", role = "aut"),
@@ -19,7 +19,8 @@ Imports:
     arm,
     Matrix,
     matrixcalc,
-    tidyverse
+    tidyverse,
+    MASS
 RoxygenNote: 7.3.1
 Depends:
     R (>= 3.5.0)
