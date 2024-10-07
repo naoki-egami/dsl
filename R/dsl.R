@@ -16,6 +16,7 @@
 #' @param sample_split The number of sampling-splitting. Default is \code{10}.
 #' @param unc_label A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the quasi-Bayesian approach to incorporate uncertainties in labels. Default is \code{FALSE}.
 #' @param unc_label_sim (Used when \code{unc_label = TRUE}) The number of re-sampling of labels within each observation. Default is \code{100}.
+#' @param tuning A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the power-tuning. Default is \code{TRUE}.
 #' @param seed Numeric \code{seed} used internally. Default is \code{1234}.
 #' @rawNamespace import(Matrix, except = summary)
 #' @importFrom grf regression_forest
@@ -55,6 +56,7 @@ dsl <- function(model = "lm",
                 sample_split = 5,
                 unc_label = FALSE,
                 unc_label_sim = 50,
+                tuning = TRUE,
                 seed = 1234){
 
   # ##################
@@ -62,6 +64,7 @@ dsl <- function(model = "lm",
   # ##################
   optim_method <-  "L-BFGS-B"
   lambda <-  0
+  tuning_para <- 1
 
   # data.frame
   class(data) <- "data.frame"
@@ -183,12 +186,23 @@ dsl <- function(model = "lm",
   if(unc_label == FALSE){
     predicted_var_use <- predicted_var
 
+    # if(tuning == TRUE){
+    #   est_tuning_para <- fit_dsl(data, formula, model, fixed_effect, index_use, index,
+    #                              predicted_var = predicted_var_use, labeled, prediction, covariates_use,
+    #                              sample_prob, clustered, feature,
+    #                              seed, sl_method, family, sample_split = 1, cross_fit,
+    #                              num_expert, equal_prob, num_data, cluster,
+    #                              optim_method, lambda, verbose = FALSE, tuning = TRUE, tuning_para = 1)
+    # }else{
+    #   est_tuning_para <- 1
+    # }
+
     out <- fit_dsl(data, formula, model, fixed_effect, index_use, index,
                    predicted_var = predicted_var_use, labeled, prediction, covariates_use,
                    sample_prob, clustered, feature,
                    seed, sl_method, family, sample_split, cross_fit,
                    num_expert, equal_prob, num_data, cluster,
-                   optim_method, lambda, verbose = TRUE)
+                   optim_method, lambda, verbose = TRUE, tuning = tuning, tuning_para = tuning_para)
 
   }else if(unc_label == TRUE){
     # randomly sampling
@@ -221,7 +235,7 @@ dsl <- function(model = "lm",
                         sample_prob, clustered, feature,
                         seed, sl_method, family, sample_split, cross_fit,
                         num_expert, equal_prob, num_data, cluster,
-                        optim_method, lambda, verbose = FALSE)
+                        optim_method, lambda, verbose = FALSE, tuning = tuning)
 
       coef_rs_b <- mvrnorm(n = 100, mu = fit_rs$coefficients, Sigma = fit_rs$vcov) # nrow = 100, ncol = length(coefficient)
       RMSE_cv_M[1:nrow(RMSE_cv_M), rs]  <- apply(fit_rs$RMSE, 1, mean)

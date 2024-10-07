@@ -1,24 +1,24 @@
 # ######
 # lm
 # ######
-lm_dsl_moment_base <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred){
+lm_dsl_moment_base <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
   m_orig <- X_orig * as.numeric(Y_orig - X_orig %*% par)
 
   m_orig[labeled_ind == 0, ] <- 0
 
-  m_pred <- X_pred * as.numeric(Y_pred - X_pred %*% par)
+  m_pred <- tuning_para*(X_pred * as.numeric(Y_pred - X_pred %*% par))
   m_dr   <- m_pred + (m_orig - m_pred) * as.numeric(labeled_ind/sample_prob_use)
   return(m_dr)
 }
 
-lm_dsl_moment_orig <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred){
+lm_dsl_moment_orig <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
   m_orig <- X_orig * as.numeric(Y_orig - X_orig %*% par)
   m_orig[labeled_ind == 0, ] <- 0
   return(m_orig)
 }
 
-lm_dsl_moment_pred <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred){
-  m_pred <- X_pred * as.numeric(Y_pred - X_pred %*% par)
+lm_dsl_moment_pred <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
+  m_pred <- tuning_para*(X_pred * as.numeric(Y_pred - X_pred %*% par))
   return(m_pred)
 }
 
@@ -42,7 +42,7 @@ lm_dsl_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y
 # #####
 # felm
 # #####
-felm_dsl_moment_base <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, fe_Y, fe_X){
+felm_dsl_moment_base <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, fe_Y, fe_X, tuning_para){
   ## We just need to compute the alpha and gamma first.
   fe_use <- as.numeric(fe_Y) - as.matrix(fe_X) %*% as.numeric(par)
 
@@ -50,7 +50,7 @@ felm_dsl_moment_base <- function(par, labeled_ind, sample_prob_use, Y_orig, X_or
 
   m_orig[labeled_ind == 0, ] <- 0
 
-  m_pred <- X_pred * as.numeric(Y_pred - fe_use - X_pred %*% par)
+  m_pred <- tuning_para*(X_pred * as.numeric(Y_pred - fe_use - X_pred %*% par))
   m_dr   <- m_pred + (m_orig - m_pred) * as.numeric(labeled_ind/sample_prob_use)
   return(m_dr)
 }
@@ -74,27 +74,27 @@ demean_dsl <- function(data_base, adj_Y, adj_X, index_use){
 # #####
 # logit
 # #####
-logit_dsl_moment_base <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred){
+logit_dsl_moment_base <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
   inv_logit <- 1/(1+exp(-X_orig %*% par))
   m_orig <- X_orig * as.numeric(Y_orig - inv_logit)
   m_orig[labeled_ind == 0, ] <- 0  # r/pi * Y
 
   inv_logit_pred <- 1/(1+exp(-X_pred %*% par))
-  m_pred <- X_pred * as.numeric(Y_pred - inv_logit_pred)
+  m_pred <- tuning_para*(X_pred * as.numeric(Y_pred - inv_logit_pred))
   m_dr   <- m_pred + (m_orig - m_pred) * as.numeric(labeled_ind/sample_prob_use)
   return(m_dr)
 }
 
-logit_dsl_moment_orig <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred){
+logit_dsl_moment_orig <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
   inv_logit <- 1/(1+exp(-X_orig %*% par))
   m_orig <- X_orig * as.numeric(Y_orig - inv_logit)
   m_orig[labeled_ind == 0, ] <- 0  # r/pi * Y
   return(m_orig)
 }
 
-logit_dsl_moment_pred <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred){
+logit_dsl_moment_pred <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
   inv_logit_pred <- 1/(1+exp(-X_pred %*% par))
-  m_pred <- X_pred * as.numeric(Y_pred - inv_logit_pred)
+  m_pred <- tuning_para*(X_pred * as.numeric(Y_pred - inv_logit_pred))
   return(m_pred)
 }
 

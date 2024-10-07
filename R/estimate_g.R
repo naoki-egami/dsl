@@ -24,6 +24,8 @@ fit_model <- function(outcome, labeled, covariates, data, method, sample_prob = 
     suppressWarnings({fit_out <- SuperLearner::SuperLearner(Y = Y[R == 1], X = X[R == 1, , drop = FALSE],
                                                             SL.library = sl_method, family = family,
                                                             always.split.variables = prediction)})
+  }else if(any(method == "identity")){
+    fit_out <- "identity_function"
   }else if(any(method != "grf")){
     method <- setdiff(method, "grf")
     sl_method <- paste0("SL.", method)
@@ -50,6 +52,8 @@ fit_test <- function(fit_out, outcome, labeled, covariates, data, method, family
   if(any(method == "grf")){
     new_data_use <- X
     Y_hat <- predict(fit_out, newdata = new_data_use)$predictions
+  }else if(any(method == "identity")){
+    Y_hat <- as.numeric(X[,1])
   }else if(any(method != "grf")){
     new_data_use <- as.data.frame(X)
     suppressWarnings({Y_hat <- predict(fit_out, newdata = new_data_use, onlySL = TRUE)$pred})
@@ -76,7 +80,7 @@ available_method <- function(print_out = TRUE){
   sl_method <- gsub("SL.", "", sl_method)
   sl_method <- setdiff(sl_method, "template")
 
-  all_method <- c("grf", sl_method)
+  all_method <- c("grf", sl_method, "identity")
   if(print_out == TRUE){
     print(all_method)
   }

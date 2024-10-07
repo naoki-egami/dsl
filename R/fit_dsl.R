@@ -3,7 +3,7 @@ fit_dsl <- function(data, formula, model, fixed_effect, index_use, index,
                     sample_prob, clustered, feature,
                     seed, sl_method, family, sample_split, cross_fit,
                     num_expert, equal_prob, num_data, cluster,
-                    optim_method, lambda, verbose) {
+                    optim_method, lambda, verbose, tuning, tuning_para) {
 
   # ##################
   # Data Preparation
@@ -33,7 +33,7 @@ fit_dsl <- function(data, formula, model, fixed_effect, index_use, index,
   dm_vcov_J_l <- array(NA, dim = c(ncol_X_exp, ncol_X_exp, sample_split))
   dm_vcov_D_l <- array(NA, dim = c(ncol_X, ncol_X, sample_split))
   RMSE_cv <- matrix(NA, nrow = length(predicted_var), ncol = sample_split)
-
+  tuning_para_vec <- rep(NA, sample_split)
   # ######################
   # Sample Splitting
   # ######################
@@ -109,18 +109,56 @@ fit_dsl <- function(data, formula, model, fixed_effect, index_use, index,
     # ##############
     # DSL Estimator
     # ##############
-    fit_dm <- dsl_general_moment_est(model = model,
-                                     formula = formula,
-                                     labeled = labeled,
-                                     sample_prob = sample_prob,
-                                     predicted_var = predicted_var,
-                                     data_orig = data_orig,
-                                     data_pred = data_pred,
-                                     index = index,
-                                     fixed_effect = fixed_effect,
-                                     clustered = clustered,
-                                     optim_method = optim_method,
-                                     lambda = lambda)
+    if(tuning == FALSE){
+      fit_dm <- dsl_general_moment_est(model = model,
+                                       formula = formula,
+                                       labeled = labeled,
+                                       sample_prob = sample_prob,
+                                       predicted_var = predicted_var,
+                                       data_orig = data_orig,
+                                       data_pred = data_pred,
+                                       index = index,
+                                       fixed_effect = fixed_effect,
+                                       clustered = clustered,
+                                       optim_method = optim_method,
+                                       lambda = lambda,
+                                       tuning = FALSE,
+                                       tuning_para = tuning_para)
+    }else if(tuning == TRUE){
+      estimate_tuning_para <- dsl_general_moment_est(model = model,
+                                                     formula = formula,
+                                                     labeled = labeled,
+                                                     sample_prob = sample_prob,
+                                                     predicted_var = predicted_var,
+                                                     data_orig = data_orig,
+                                                     data_pred = data_pred,
+                                                     index = index,
+                                                     fixed_effect = fixed_effect,
+                                                     clustered = clustered,
+                                                     optim_method = optim_method,
+                                                     lambda = lambda,
+                                                     tuning = TRUE,
+                                                     tuning_para = 1)
+
+      # cat(paste0("Tuning Parameter: ", round(estimate_tuning_para, 2)))
+
+      tuning_para_vec[ss_use] <- estimate_tuning_para
+
+      fit_dm <- dsl_general_moment_est(model = model,
+                                       formula = formula,
+                                       labeled = labeled,
+                                       sample_prob = sample_prob,
+                                       predicted_var = predicted_var,
+                                       data_orig = data_orig,
+                                       data_pred = data_pred,
+                                       index = index,
+                                       fixed_effect = fixed_effect,
+                                       clustered = clustered,
+                                       optim_method = optim_method,
+                                       lambda = lambda,
+                                       tuning = FALSE,
+                                       tuning_para = estimate_tuning_para)
+    }
 
     dm_point_l[ss_use, 1:ncol_X] <- fit_dm$coefficients
     dm_se_l[ss_use, 1:ncol_X]    <- fit_dm$standard_errors
@@ -168,7 +206,8 @@ fit_dsl <- function(data, formula, model, fixed_effect, index_use, index,
                    "vcov_main_1" = dm_vcov_main_1_l,
                    "vcov_main_23" = dm_vcov_main_23_l,
                    "vcov_J" = dm_vcov_J_l,
-                   "vcov_D" = dm_vcov_D_l)
+                   "vcov_D" = dm_vcov_D_l,
+                   "tuning_para" = tuning_para_vec)
 
   out <- list("coefficients" = dm_point,
               "standard_errors" = dm_se,

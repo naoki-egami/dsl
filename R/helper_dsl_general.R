@@ -1,6 +1,6 @@
 dsl_general_moment_est <- function(model, formula, labeled, sample_prob, predicted_var, data_orig, data_pred, index = NULL, fixed_effect = NULL,
                                    clustered, optim_method = "L-BFGS-B",
-                                   lambda = 0.00001){
+                                   lambda = 0.00001, tuning, tuning_para){
 
   # Prepare data
   labeled_ind <- data_orig[, labeled]
@@ -110,7 +110,8 @@ dsl_general_moment_est <- function(model, formula, labeled, sample_prob, predict
                 model = model,
                 method = optim_method,
                 hessian = FALSE,
-                control = list(maxit = 5000))$par
+                control = list(maxit = 5000),
+                tuning_para = tuning_para)$par
   names(est0) <- colnames(X_orig_use)
 
   # ###################################################
@@ -182,13 +183,14 @@ dsl_general_moment_est <- function(model, formula, labeled, sample_prob, predict
                                                 X_pred = X_pred_use_exp,
                                                 model  = model,
                                                 clustered = clustered,
-                                                cluster = data_orig$cluster___)
+                                                cluster = data_orig$cluster___,
+                                                tuning = tuning,
+                                                tuning_para = tuning_para)
   # Meat   <- dsl_general_Meat(par = est0_exp, labeled_ind, sample_prob_use, Y_orig, X_orig_use_exp, Y_pred, X_pred_use_exp, model,
   #                            clustered, data_orig$cluster___)
 
-  Meat <- Meat_decomp$main_1 + Meat_decomp$main_23
-
   # Jacobian
+  ## I do not incorporate the tuning parameter here because it does not affect asymptotically (2024/10/05)
   J <- dsl_general_Jacobian(par = est0_exp, labeled_ind, sample_prob_use, Y_orig, X_orig_use_exp, Y_pred, X_pred_use_exp, model)
 
   # Variance
@@ -196,52 +198,73 @@ dsl_general_moment_est <- function(model, formula, labeled, sample_prob, predict
   s_J_use <- s_J[1:length(est0), , drop = FALSE]
   rm(s_J)
 
-  V0 <- (s_J_use %*% Meat %*% t(s_J_use))/n
+  if(tuning == TRUE){
 
-  # Variance of the target paramter
-  if(model == "felm"){ # with intercept
-    # Rescale-back the coefficients and V
-    D_2 <- cbind(diag(1/sd_X, ncol = length(sd_X), nrow = length(sd_X))) # we don't need intercept
-    D   <- rbind(D_2)
-  }else{
-    # Rescale-back the coefficients and V
-    if(with_intercept == TRUE){
-      D_1 <- c(1, - mean_X/sd_X)
-      D_2 <- cbind(0, diag(1/sd_X, ncol = length(sd_X), nrow = length(sd_X)))
-      D   <- rbind(D_1, D_2)
-    }else{
-      D_2 <- cbind(diag(1/sd_X, ncol = length(sd_X), nrow = length(sd_X)))
+    # I think it is correct to pick tuning_para after standardization as we do here.(2024/10/05)
+
+    tr_1 <- sum(diag(s_J_use %*% Meat_decomp$main_t1 %*% t(s_J_use)))
+    tr_2 <- sum(diag(s_J_use %*% Meat_decomp$main_t2 %*% t(s_J_use)))
+
+    tuning_para <- tr_2/(2*tr_1)
+
+    tuning_para <- max(0, tuning_para)
+    tuning_para <- min(1, tuning_para)
+    return(tuning_para)
+
+  }else if(tuning == FALSE){
+    # Meat
+    Meat <- Meat_decomp$main_1 + Meat_decomp$main_23
+
+    V0 <- (s_J_use %*% Meat %*% t(s_J_use))/n
+
+    # Variance of the target paramter
+    if(model == "felm"){ # with intercept
+      # Rescale-back the coefficients and V
+      D_2 <- cbind(diag(1/sd_X, ncol = length(sd_X), nrow = length(sd_X))) # we don't need intercept
       D   <- rbind(D_2)
+    }else{
+      # Rescale-back the coefficients and V
+      if(with_intercept == TRUE){
+        D_1 <- c(1, - mean_X/sd_X)
+        D_2 <- cbind(0, diag(1/sd_X, ncol = length(sd_X), nrow = length(sd_X)))
+        D   <- rbind(D_1, D_2)
+      }else{
+        D_2 <- cbind(diag(1/sd_X, ncol = length(sd_X), nrow = length(sd_X)))
+        D   <- rbind(D_2)
+      }
     }
+
+    # Estimates and Variance
+    est <- as.numeric(D %*% est0)
+    V   <- D %*% V0 %*% t(D)
+
+    if(model == "felm"){
+      col_name_keep <- col_name_keep[-1]
+    }
+
+    names(est) <- col_name_keep
+    se <- sqrt(diag(V))
+    names(se) <- col_name_keep
+
+    out <- list("coefficients" = est, "standard_errors" = se, "vcov" = V,
+                "Meat" = Meat, "Meat_decomp" = Meat_decomp, "J" = J, "D" = D, "vcov0" = V0)
+
   }
 
-  # Estimates and Variance
-  est <- as.numeric(D %*% est0)
-  V   <- D %*% V0 %*% t(D)
 
-  if(model == "felm"){
-    col_name_keep <- col_name_keep[-1]
-  }
-
-  names(est) <- col_name_keep
-  se <- sqrt(diag(V))
-  names(se) <- col_name_keep
-
-  out <- list("coefficients" = est, "standard_errors" = se, "vcov" = V,
-              "Meat" = Meat, "Meat_decomp" = Meat_decomp, "J" = J, "D" = D, "vcov0" = V0)
   return(out)
 }
 # ##############
 # General
 # ##############
-dsl_general_moment <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, fe_Y, fe_X, model, lambda){
+dsl_general_moment <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, fe_Y, fe_X, model, lambda, tuning_para){
 
   if(model == "lm"){
-    m_dr   <- lm_dsl_moment_base(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred)
+    m_dr   <- lm_dsl_moment_base(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
   }else if(model == "logit"){
-    m_dr   <- logit_dsl_moment_base(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred)
+    m_dr   <- logit_dsl_moment_base(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
   }else if(model == "felm"){
-    m_dr   <- felm_dsl_moment_base(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, fe_Y, fe_X)
+    m_dr   <- felm_dsl_moment_base(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, fe_Y, fe_X, tuning_para)
   }
 
   g <- apply(m_dr, 2, mean) # m_n(theta) in equation (6)
@@ -278,19 +301,19 @@ dsl_general_moment <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig
 #   return(Meat)
 # }
 
-dsl_general_moment_base_decomp <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, model, clustered, cluster){
+dsl_general_moment_base_decomp <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, model, clustered, cluster, tuning, tuning_para){
 
   if(model == "lm"){
-    m_orig <- lm_dsl_moment_orig(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred)
-    m_pred <- lm_dsl_moment_pred(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred)
+    m_orig <- lm_dsl_moment_orig(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
+    m_pred <- lm_dsl_moment_pred(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
 
   }else if(model == "logit"){
-    m_orig <- logit_dsl_moment_orig(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred)
-    m_pred <- logit_dsl_moment_pred(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred)
+    m_orig <- logit_dsl_moment_orig(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
+    m_pred <- logit_dsl_moment_pred(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
 
   }else if(model == "felm"){ # we can use the same function as "lm"
-    m_orig <- lm_dsl_moment_orig(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred)
-    m_pred <- lm_dsl_moment_pred(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred)
+    m_orig <- lm_dsl_moment_orig(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
+    m_pred <- lm_dsl_moment_pred(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
 
     m_orig <- Matrix(m_orig, sparse = TRUE)
     m_pred <- Matrix(m_pred, sparse = TRUE)
@@ -303,28 +326,70 @@ dsl_general_moment_base_decomp <- function(par, labeled_ind, sample_prob_use, Y_
     # diag_1 <- Matrix(diag(labeled_ind/(sample_prob_use^2), ncol = length(labeled_ind), nrow = length(labeled_ind)), sparse = TRUE)
     # diag_2 <- Matrix(diag(labeled_ind/sample_prob_use, ncol = length(labeled_ind), nrow = length(labeled_ind)), sparse = TRUE)
 
-    diag_1 <- Diagonal(x = labeled_ind/(sample_prob_use^2))
-    diag_2 <- Diagonal(x = labeled_ind/sample_prob_use)
+    if(tuning == FALSE){
+      diag_1 <- Diagonal(x = labeled_ind/(sample_prob_use^2))
+      diag_2 <- Diagonal(x = labeled_ind/sample_prob_use)
 
-    main_1 <- (t(m_orig - m_pred) %*% diag_1 %*% (m_orig - m_pred))/n
-    main_2 <- (t(m_pred)%*% m_pred)/n
-    main_30 <- t(m_pred)%*% diag_2 %*% (m_orig - m_pred)
-    main_3 <- (main_30 + t(main_30))/n
-  }else if(clustered == TRUE){
-    uniq_cluster <- sort(unique(cluster))
-    m_orig_m_pred <- (m_orig - m_pred) * as.numeric(labeled_ind/sample_prob_use)
-    m_pred_sum <- matrix(NA, ncol = ncol(m_pred), nrow = length(uniq_cluster))
-    m_orig_m_pred_sum <- matrix(NA, ncol = ncol(m_orig_m_pred), nrow = length(uniq_cluster))
-    for(z in 1:length(uniq_cluster)){
-      m_pred_sum[z,1:ncol(m_pred)] <- colSums(m_pred[cluster == uniq_cluster[z], ,drop = FALSE])
-      m_orig_m_pred_sum[z, 1:ncol(m_orig_m_pred)] <- colSums(m_orig_m_pred[cluster == uniq_cluster[z], ,drop = FALSE])
+      main_1 <- (t(m_orig - m_pred) %*% diag_1 %*% (m_orig - m_pred))/n
+      main_2 <- (t(m_pred)%*% m_pred)/n
+      main_30 <- t(m_pred)%*% diag_2 %*% (m_orig - m_pred)
+      main_3 <- (main_30 + t(main_30))/n
+
+      out   <- list("main_1" = main_1, "main_23" = main_2 + main_3)
+
+    }else if(tuning == TRUE){
+      diag_t1 <- Diagonal(x = c(1/sample_prob_use - 1))
+      diag_t2 <- Diagonal(x = c(labeled_ind/(sample_prob_use^2) - labeled_ind/sample_prob_use))
+      main_t1 <- (t(m_pred) %*% diag_t1 %*% (m_pred))/n  # E(1/pi m_pred*m_pred) - E(m_pred * m_pred)
+      main_t2_0 <- (t(m_pred) %*% diag_t2 %*% (m_orig))/n  # E(1/pi m_pred*m_orig) - E(m_pred * m_orig)
+      main_t2 <- main_t2_0 + t(main_t2_0)
+
+      out <- list("main_t1" = main_t1, "main_t2" = main_t2)
     }
-    m_pred_sum <- Matrix(m_pred_sum, sparse = TRUE)
-    m_orig_m_pred_sum <- Matrix(m_orig_m_pred_sum, sparse = TRUE)
-    main_1  <- (t(m_orig_m_pred_sum)%*%m_orig_m_pred_sum)/n
-    main_2  <- (t(m_pred_sum)%*%m_pred_sum)/n
-    main_3_c0 <- (t(m_pred_sum)%*%m_orig_m_pred_sum)/n
-    main_3  <- main_3_c0 + t(main_3_c0)
+
+  }else if(clustered == TRUE){
+
+    uniq_cluster <- sort(unique(cluster))
+
+    if(tuning == FALSE){
+      m_orig_m_pred <- (m_orig - m_pred) * as.numeric(labeled_ind/sample_prob_use)
+      m_pred_sum <- matrix(NA, ncol = ncol(m_pred), nrow = length(uniq_cluster))
+      m_orig_m_pred_sum <- matrix(NA, ncol = ncol(m_orig_m_pred), nrow = length(uniq_cluster))
+      for(z in 1:length(uniq_cluster)){
+        m_pred_sum[z,1:ncol(m_pred)] <- colSums(m_pred[cluster == uniq_cluster[z], ,drop = FALSE])
+        m_orig_m_pred_sum[z, 1:ncol(m_orig_m_pred)] <- colSums(m_orig_m_pred[cluster == uniq_cluster[z], ,drop = FALSE])
+      }
+      m_pred_sum <- Matrix(m_pred_sum, sparse = TRUE)
+      m_orig_m_pred_sum <- Matrix(m_orig_m_pred_sum, sparse = TRUE)
+      main_1  <- (t(m_orig_m_pred_sum)%*%m_orig_m_pred_sum)/n
+      main_2  <- (t(m_pred_sum)%*%m_pred_sum)/n
+      main_3_c0 <- (t(m_pred_sum)%*%m_orig_m_pred_sum)/n
+      main_3  <- main_3_c0 + t(main_3_c0)
+
+      out   <- list("main_1" = main_1, "main_23" = main_2 + main_3)
+
+    }else if(tuning == TRUE){
+      m_pred_t <- m_pred * as.numeric(sqrt(1/sample_prob_use - 1))
+      m_pred_sum_t <- matrix(NA, ncol = ncol(m_pred), nrow = length(uniq_cluster))
+      m_pred_t2 <- m_pred * as.numeric(c(labeled_ind/(sample_prob_use^2) - labeled_ind/sample_prob_use))
+      m_pred_sum_t2 <- matrix(NA, ncol = ncol(m_pred), nrow = length(uniq_cluster))
+      m_orig_sum_t <- matrix(NA, ncol = ncol(m_orig), nrow = length(uniq_cluster))
+      for(z in 1:length(uniq_cluster)){
+        m_pred_sum_t[z,1:ncol(m_pred_t)] <- colSums(m_pred_t[cluster == uniq_cluster[z], ,drop = FALSE])
+        m_pred_sum_t2[z,1:ncol(m_pred_t)] <- colSums(m_pred_t2[cluster == uniq_cluster[z], ,drop = FALSE])
+        m_orig_sum_t[z, 1:ncol(m_orig)] <- colSums(m_orig[cluster == uniq_cluster[z], ,drop = FALSE])
+      }
+      m_pred_sum_t <- Matrix(m_pred_sum_t, sparse = TRUE)
+      main_t1  <- (t(m_pred_sum_t)%*%m_pred_sum_t)/n
+
+      m_pred_sum_t2 <- Matrix(m_pred_sum_t2, sparse = TRUE)
+      m_orig_sum_t  <- Matrix(m_orig_sum_t, sparse = TRUE)
+      main_t2_0  <- (t(m_pred_sum_t2)%*%m_orig_sum_t)/n
+      main_t2 <- main_t2_0 + t(main_t2_0)
+
+      out <- list("main_t1" = main_t1, "main_t2" = main_t2)
+    }
+
     # }else{
     # previous loop version
     #   uniq_cluster <- sort(unique(cluster))
@@ -351,8 +416,6 @@ dsl_general_moment_base_decomp <- function(par, labeled_ind, sample_prob_use, Y_
     #   main_3 <- main_3_b/n
     # }
   }
-
-  out   <- list("main_1" = main_1, "main_23" = main_2 + main_3)
   return(out)
 }
 

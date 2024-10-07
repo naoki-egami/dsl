@@ -19,9 +19,10 @@ dsl(
   feature = NULL,
   family = "gaussian",
   cross_fit = 5,
-  sample_split = 10,
+  sample_split = 5,
   unc_label = FALSE,
-  unc_label_sim = 100,
+  unc_label_sim = 50,
+  tuning = TRUE,
   seed = 1234
 )
 }
@@ -59,6 +60,8 @@ dsl(
 \item{unc_label}{A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the quasi-Bayesian approach to incorporate uncertainties in labels. Default is \code{FALSE}.}
 
 \item{unc_label_sim}{(Used when \code{unc_label = TRUE}) The number of re-sampling of labels within each observation. Default is \code{100}.}
+
+\item{tuning}{A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the power-tuning. Default is \code{TRUE}.}
 
 \item{seed}{Numeric \code{seed} used internally. Default is \code{1234}.}
 }
