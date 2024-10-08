@@ -22,7 +22,7 @@ dsl(
   sample_split = 5,
   unc_label = FALSE,
   unc_label_sim = 50,
-  tuning = TRUE,
+  tuning = FALSE,
   seed = 1234
 )
 }
@@ -61,7 +61,7 @@ dsl(
 
 \item{unc_label_sim}{(Used when \code{unc_label = TRUE}) The number of re-sampling of labels within each observation. Default is \code{100}.}
 
-\item{tuning}{A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the power-tuning. Default is \code{TRUE}.}
+\item{tuning}{A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the power-tuning. Default is \code{FALSE}.}
 
 \item{seed}{Numeric \code{seed} used internally. Default is \code{1234}.}
 }

@@ -20,6 +20,13 @@ NULL
 #' @keywords datasets
 NULL
 
+#' Data for illustrating \code{model = "poisson"}.
+#' @name data_poisson
+#' @docType data
+#' @format data
+#' @keywords datasets
+NULL
+
 #' Data for illustrating \code{model = "felm"}.
 #' @name data_felm
 #' @docType data
