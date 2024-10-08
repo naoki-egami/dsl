@@ -191,7 +191,7 @@ dsl_general_moment_est <- function(model, formula, labeled, sample_prob, predict
 
   # Jacobian
   ## I do not incorporate the tuning parameter here because it does not affect asymptotically (2024/10/05)
-  J <- dsl_general_Jacobian(par = est0_exp, labeled_ind, sample_prob_use, Y_orig, X_orig_use_exp, Y_pred, X_pred_use_exp, model)
+  J <- dsl_general_Jacobian(par = est0_exp, labeled_ind, sample_prob_use, Y_orig, X_orig_use_exp, Y_pred, X_pred_use_exp, model, tuning_para)
 
   # Variance
   s_J <- solve(J)
@@ -265,6 +265,8 @@ dsl_general_moment <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig
     m_dr   <- logit_dsl_moment_base(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
   }else if(model == "felm"){
     m_dr   <- felm_dsl_moment_base(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, fe_Y, fe_X, tuning_para)
+  }else if(model == "poisson"){
+    m_dr   <- poisson_dsl_moment_base(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
   }
 
   g <- apply(m_dr, 2, mean) # m_n(theta) in equation (6)
@@ -310,6 +312,10 @@ dsl_general_moment_base_decomp <- function(par, labeled_ind, sample_prob_use, Y_
   }else if(model == "logit"){
     m_orig <- logit_dsl_moment_orig(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
     m_pred <- logit_dsl_moment_pred(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
+
+  }else if(model == "poisson"){
+    m_orig <- poisson_dsl_moment_orig(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
+    m_pred <- poisson_dsl_moment_pred(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
 
   }else if(model == "felm"){ # we can use the same function as "lm"
     m_orig <- lm_dsl_moment_orig(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
@@ -419,15 +425,17 @@ dsl_general_moment_base_decomp <- function(par, labeled_ind, sample_prob_use, Y_
   return(out)
 }
 
-dsl_general_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, model){
+dsl_general_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, model, tuning_para){
 
   if(model == "lm"){
-    J   <- lm_dsl_Jacobian(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, model)
+    J   <- lm_dsl_Jacobian(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, model, tuning_para)
   }else if(model == "logit"){
-    J   <- logit_dsl_Jacobian(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred)
+    J   <- logit_dsl_Jacobian(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
+  }else if(model == "poisson"){
+    J   <- poisson_dsl_Jacobian(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para)
   }else if(model == "felm"){
     # we can use the same function as "lm"
-    J   <- lm_dsl_Jacobian(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, model)
+    J   <- lm_dsl_Jacobian(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, model, tuning_para)
   }
   return(J)
 }

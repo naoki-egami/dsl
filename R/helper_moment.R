@@ -22,7 +22,7 @@ lm_dsl_moment_pred <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig
   return(m_pred)
 }
 
-lm_dsl_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, model){
+lm_dsl_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, model, tuning_para){
   X_orig[labeled_ind == 0, ] <- 0
 
   if(model == "felm"){
@@ -30,7 +30,7 @@ lm_dsl_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y
     X_pred <- Matrix(X_pred, sparse = TRUE)
   }
   diag_1 <- Diagonal(x = labeled_ind/sample_prob_use)
-  diag_2 <- Diagonal(x = 1 - labeled_ind/sample_prob_use)
+  diag_2 <- Diagonal(x = (1 - labeled_ind/sample_prob_use)*tuning_para)
 
   # diag_1 <- diag(labeled_ind/sample_prob_use, ncol = length(labeled_ind), nrow = length(labeled_ind))
   # diag_2 <- diag(1 - labeled_ind/sample_prob_use, ncol = length(labeled_ind), nrow = length(labeled_ind))
@@ -98,7 +98,7 @@ logit_dsl_moment_pred <- function(par, labeled_ind, sample_prob_use, Y_orig, X_o
   return(m_pred)
 }
 
-logit_dsl_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred){
+logit_dsl_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
 
   #
   # inv_logit_pred <- 1/(1+exp(-X_pred%*%par))
@@ -108,8 +108,8 @@ logit_dsl_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig
   diag_pred2 <- Diagonal(x = inv_logit_pred2)
   diag_pred2_R <- Diagonal(x = inv_logit_pred2*labeled_ind/sample_prob_use)
 
-  grad_pred <- (t(X_pred) %*% diag_pred2 %*% X_pred)/nrow(X_pred)
-  grad_pred_R <- (t(X_pred) %*% diag_pred2_R %*% X_pred)/nrow(X_pred)
+  grad_pred <- tuning_para*((t(X_pred) %*% diag_pred2 %*% X_pred)/nrow(X_pred))
+  grad_pred_R <- tuning_para*((t(X_pred) %*% diag_pred2_R %*% X_pred)/nrow(X_pred))
 
   # original
   # inv_logit_orig  <- 1/(1+exp(-X_orig%*%par))
@@ -126,4 +126,48 @@ logit_dsl_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig
 
   out <- grad_main
   return(out)
+}
+
+# ########
+# Poisson
+# ########
+poisson_dsl_moment_base <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
+  out_poisson <- exp(X_orig %*% par)
+  m_orig <- X_orig * as.numeric(Y_orig - out_poisson)
+  m_orig[labeled_ind == 0, ] <- 0  # r/pi * Y
+
+  out_poisson_pred <- exp(X_pred %*% par)
+  m_pred <- tuning_para*(X_pred * as.numeric(Y_pred - out_poisson_pred))
+  m_dr   <- m_pred + (m_orig - m_pred) * as.numeric(labeled_ind/sample_prob_use)
+  return(m_dr)
+}
+
+poisson_dsl_moment_orig <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
+  out_poisson <- exp(X_orig %*% par)
+  m_orig <- X_orig * as.numeric(Y_orig - out_poisson)
+  m_orig[labeled_ind == 0, ] <- 0  # r/pi * Y
+  return(m_orig)
+}
+
+poisson_dsl_moment_pred <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
+  out_poisson_pred <- exp(X_pred %*% par)
+  m_pred <- tuning_para*(X_pred * as.numeric(Y_pred - out_poisson_pred))
+  return(m_pred)
+}
+
+poisson_dsl_Jacobian <- function(par, labeled_ind, sample_prob_use, Y_orig, X_orig, Y_pred, X_pred, tuning_para){
+  X_orig[labeled_ind == 0, ] <- 0
+
+  out_poisson_orig <- exp(X_orig %*% par)
+  out_poisson_pred <- exp(X_pred %*% par)
+
+
+  diag_1 <- Diagonal(x = (labeled_ind/sample_prob_use)*out_poisson_orig)
+  diag_2 <- Diagonal(x = (1 - labeled_ind/sample_prob_use)*out_poisson_pred*tuning_para)
+
+  # diag_1 <- diag(labeled_ind/sample_prob_use, ncol = length(labeled_ind), nrow = length(labeled_ind))
+  # diag_2 <- diag(1 - labeled_ind/sample_prob_use, ncol = length(labeled_ind), nrow = length(labeled_ind))
+
+  J <- (t(X_orig) %*% diag_1 %*% X_orig + t(X_pred) %*% diag_2 %*% X_pred)/nrow(X_orig)
+  return(J)
 }

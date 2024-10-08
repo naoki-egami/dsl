@@ -1,5 +1,5 @@
 #' Estimating Regression using the DSL framework
-#' @param model A regression model \code{dsl} currently supports \code{lm} (linear regression), \code{logit} (logistic regression), and \code{felm} (fixed-effects regression).
+#' @param model A regression model \code{dsl} currently supports \code{lm} (linear regression), \code{logit} (logistic regression), \code{poisson} (poisson regression), and \code{felm} (fixed-effects regression).
 #' @param formula A formula used in the specified regression model.
 #' @param predicted_var A vector of column names in the data that correspond to variables that need to be predicted. When \code{unc_label = TRUE}, this should be \code{list} where each element of the list contains variable names specifying labels from different coders.
 #' @param prediction A vector of column names in the data that correspond to predictions of \code{predicted_var}.
@@ -16,7 +16,7 @@
 #' @param sample_split The number of sampling-splitting. Default is \code{10}.
 #' @param unc_label A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the quasi-Bayesian approach to incorporate uncertainties in labels. Default is \code{FALSE}.
 #' @param unc_label_sim (Used when \code{unc_label = TRUE}) The number of re-sampling of labels within each observation. Default is \code{100}.
-#' @param tuning A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the power-tuning. Default is \code{TRUE}.
+#' @param tuning A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the power-tuning. Default is \code{FALSE}.
 #' @param seed Numeric \code{seed} used internally. Default is \code{1234}.
 #' @rawNamespace import(Matrix, except = summary)
 #' @importFrom grf regression_forest
@@ -56,7 +56,7 @@ dsl <- function(model = "lm",
                 sample_split = 5,
                 unc_label = FALSE,
                 unc_label_sim = 50,
-                tuning = TRUE,
+                tuning = FALSE,
                 seed = 1234){
 
   # ##################
@@ -69,8 +69,8 @@ dsl <- function(model = "lm",
   # data.frame
   class(data) <- "data.frame"
 
-  if((model %in% c("lm", "logit", "felm")) == FALSE){
-    stop(" `model` should be either `lm`, `logit`, or `felm` ")
+  if((model %in% c("lm", "logit", "poisson", "felm")) == FALSE){
+    stop(" `model` should be either `lm`, `logit`, `poisson`, or `felm` ")
   }
 
   if(is.null(prediction) & is.null(feature)){
