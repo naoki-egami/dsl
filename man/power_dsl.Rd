@@ -22,6 +22,7 @@ power_dsl(
   family = "gaussian",
   cross_fit = 5,
   sample_split = 10,
+  tuning = FALSE,
   seed = 1234
 )
 }
@@ -59,6 +60,8 @@ power_dsl(
 \item{cross_fit}{The fold of cross-fitting. Default is \code{5}.}
 
 \item{sample_split}{The number of sampling-splitting. Default is \code{10}.}
+
+\item{tuning}{A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the power-tuning. Default is \code{FALSE}.}
 
 \item{seed}{Numeric \code{seed} used internally. Default is \code{1234}.}
 }

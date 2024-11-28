@@ -16,6 +16,7 @@
 #' @param family (Used when making predictions) A variable type of \code{predicted_var}. Default is \code{gaussian}.
 #' @param cross_fit The fold of cross-fitting. Default is \code{5}.
 #' @param sample_split The number of sampling-splitting. Default is \code{10}.
+#' @param tuning A logical value (\code{True}, or \code{FALSE}) indicating whether to apply the power-tuning. Default is \code{FALSE}.
 #' @param seed Numeric \code{seed} used internally. Default is \code{1234}.
 #' @return \code{dsl} returns an object of \code{dsl} class.
 #'  \itemize{
@@ -42,6 +43,7 @@ power_dsl <- function(labeled_size = NULL,
                       family = "gaussian",
                       cross_fit = 5,
                       sample_split = 10,
+                      tuning = FALSE,
                       seed = 1234){
 
   if(is.null(dsl_out) == TRUE){
@@ -61,6 +63,7 @@ power_dsl <- function(labeled_size = NULL,
                    family = family,
                    cross_fit = cross_fit,
                    sample_split = sample_split,
+                   tuning = tuning,
                    seed = seed)
   }
 
