@@ -163,10 +163,6 @@ dsl <- function(model = "lm",
   num_expert <- sum(data[, labeled], na.rm = TRUE)
   num_data   <- nrow(data)
 
-  # Standardize sample_prob
-  mean_prob <- sum(data[, labeled], na.rm = TRUE)/nrow(data)
-  data[, sample_prob] <- data[, sample_prob]*(mean_prob/mean(data[, sample_prob], na.rm = TRUE))
-
   if(any(is.na(data[data[, labeled] == 0, predicted_var_all]) == FALSE)){
     stop("Some `predicted_var` in non-labeled data are not NA. Please check the data. ")
   }
@@ -178,6 +174,10 @@ dsl <- function(model = "lm",
   if(all(data[, sample_prob] > 0 & data[, sample_prob] <= 1) == FALSE){
     stop(" `sample_prob` in `data` should be greater than 0 and equal to or smaller than 1. Please check the data. ")
   }
+
+  # Standardize sample_prob
+  mean_prob <- sum(data[, labeled], na.rm = TRUE)/nrow(data)
+  data[, sample_prob] <- data[, sample_prob]*(mean_prob/mean(data[, sample_prob], na.rm = TRUE))
 
 
   # #####################################
