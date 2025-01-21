@@ -58,6 +58,9 @@ dsl <- function(model = "lm",
   optim_method <-  "L-BFGS-B"
   lambda <-  0
 
+  # data.frame
+  class(data) <- "data.frame"
+
   if((model %in% c("lm", "logit", "felm")) == FALSE){
     stop(" `model` should be either `lm`, `logit`, or `felm` ")
   }
@@ -136,7 +139,7 @@ dsl <- function(model = "lm",
 
   # compute the total num of samples and labeled data
   num_expert <- sum(data[, labeled], na.rm = TRUE)
-  num_data   <- nrow(data)  
+  num_data   <- nrow(data)
 
   if(any(is.na(data[data[, labeled] == 0, predicted_var]) == FALSE)){
     stop("Some `predicted_var` in non-labeled data are not NA. Please check the data. ")
