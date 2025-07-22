@@ -62,3 +62,9 @@ install_github("naoki-egami/dsl", dependencies = TRUE)
     Surrogates for Downstream Inference: Design-based Supervised
     Learning for Social Science Applications of Large Language Models,”
     Advances in Neural Information Processing Systems (NeurIPS).
+
+-   [Rister Portinari Maranca, Chung, Hinck, Wolsky, Egami, and Stewart.
+    (2025)](https://journals.sagepub.com/doi/abs/10.1177/00491241251333372).
+    “Correcting the Measurement Errors of AI-Assisted Labeling in Image
+    Analysis Using Design-Based Supervised Learning,” Sociological
+    Methods and Research.

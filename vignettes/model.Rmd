@@ -11,7 +11,7 @@ output:
 
 - [**`lm`: Linear Regression**](#lm) <br>
 
-- [**`logit`: Logisitc Regression**](#logit) <br>
+- [**`logit`: Logistic Regression**](#logit) <br>
 
 - [**`felm`: Fixed Effects Linear Regression**](#felm) <br>
 
