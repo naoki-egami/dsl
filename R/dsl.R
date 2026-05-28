@@ -216,8 +216,13 @@ dsl <- function(model = "lm",
       train_id <- uniq_cluster[id_base != i_use]
       test_id  <- setdiff(uniq_cluster, train_id)
 
-      train_which <- unlist(sapply(train_id, function(x) which(data$cluster___ == x)))
-      test_which  <- unlist(sapply(test_id, function(x) which(data$cluster___ == x)))
+      if(clustered == FALSE){
+        train_which <- which(id_base != i_use)
+        test_which  <- which(id_base == i_use)
+      }else{
+        train_which <- unlist(sapply(train_id, function(x) which(data$cluster___ == x)))
+        test_which  <- unlist(sapply(test_id,  function(x) which(data$cluster___ == x)))
+      }
 
       data_train     <- data[train_which, , drop = FALSE]
       data_test      <- data[test_which, , drop = FALSE]
