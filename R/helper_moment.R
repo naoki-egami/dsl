@@ -61,7 +61,7 @@ demean_dsl <- function(data_base, adj_Y, adj_X, index_use){
   adj_X_avg0 <- lapply(1:ncol(adj_X), FUN = function(x) tapply(adj_X[, x], data_base[, index_use], mean, na.rm = TRUE))
   adj_X_avg  <- do.call("cbind", adj_X_avg0)
   colnames(adj_X_avg) <- colnames(adj_X)
-  adj_data   <- data.frame(cbind(adj_Y_avg, adj_X_avg))
+  adj_data   <- data.frame(cbind(adj_Y_avg, adj_X_avg), check.names = FALSE)
   adj_data$index___ <- rownames(adj_data)
   fixed_effect_use <- merge(data_base[, c(index_use, "uniq_id___"), drop = FALSE], adj_data, by.x = index_use, by.y = "index___", all.x = TRUE, sort = FALSE)
   fixed_effect_use <- fixed_effect_use[order(fixed_effect_use$uniq_id___, decreasing = FALSE), , drop = FALSE]
