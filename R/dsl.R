@@ -193,18 +193,20 @@ dsl <- function(model = "lm",
 
   set.seed(seed)
 
+  # Draw fold assignments for all sample splits before the loop.
+  # fit_model() calls set.seed(seed), so drawing them inside the loop would give the same folds in every split.
+  id_base0 <- rep(1:cross_fit, each = floor(length(uniq_cluster)/cross_fit))
+  extra <- length(uniq_cluster) - length(id_base0)
+  if(extra > 0){
+    id_base0 <- c(id_base0, 1:extra)
+  }
+  id_base_all <- lapply(1:sample_split, function(x) sample(id_base0, size = length(id_base0), replace = FALSE))
+
   cat("Cross-Fitting: ")
   for(ss_use in 1:sample_split){
     cat(paste0(ss_use,"/", sample_split, ".."))
 
-    id_base0 <- rep(1:cross_fit, each = floor(length(uniq_cluster)/cross_fit))
-    extra <- length(uniq_cluster) - length(id_base0)
-    if(extra > 0){
-      id_base0 <- c(id_base0, 1:extra)
-    }else{
-      id_base  <- id_base0
-    }
-    id_base  <- sample(id_base0, size = length(id_base0), replace = FALSE)
+    id_base <- id_base_all[[ss_use]]
 
     dm_predicted_var <- list()
     id_final <- c()
